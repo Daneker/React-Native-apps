@@ -1,0 +1,178 @@
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React from 'react';
+import { gql, graphql, compose } from 'react-apollo';
+import { GC_USER_ID, GC_AUTH_TOKEN } from '../constants';
+
+
+const CREATE_USER_MUTATION = gql`
+    mutation CreateUserMutation($username: String!, $email:String!, $password: String!) {
+        createUser(
+            username: $username,
+            authProvider: {
+                email: {
+                    email: $email,
+                    password: $password
+                }
+            }
+        ) {
+            id
+        }
+        signinUser(email: {
+            email: $email,
+            passowrd: $password
+        }) {
+            token
+            user {
+                id
+            }
+        }
+    }
+`
+const SIGNIN_USER_MUTATION = gql`
+    mutation SigninUserMutation($email: String!, $password:String!) {
+        signinUser(email:{
+            email: $email,
+            password: $password
+        }) {
+            token
+            user {
+                id
+            }
+        }
+    }
+`
+class SignUpScreen extends React.Component {
+    static navigationOptions = {
+        title: 'SIGN UP',
+      };
+
+    state = {
+        login: true, //switch btw Login and SignUp
+        email: '',
+        username: '',
+        password: '',
+    }
+
+    saveUserData = (id, token) => {
+        localStorage.setItem(GC_USER_ID, id)
+        localStorage.setItem(GC_AUTH_TOKEN, id)
+    }
+    
+    confirm = async () => {
+        const { username, email, password } = this.state
+        if(this.state.login) {
+            const result = await this.props.signinUserMutation ({
+                variables: {
+                    email, 
+                    password
+                }
+            })
+            const id = result.data.signinUser.user.id
+            const token = result.data.signinUser.token
+            this.saveUserData(id, token)
+        } else {
+            const result = await this.props.createUserMutation({
+                variables: {
+                    username,
+                    email,
+                    password
+                }
+            })
+            const id = result.data.signinUser.user.id
+            const token = result.data.signinUser.token
+           this.saveUserData(id, token)
+        }
+        this.props.history.push('/')
+    }
+
+    handleChangeUsername = (username) => {
+        this.setState({username});
+    }
+    handleChangePassword = (password) => {
+        this.setState({password});
+    }
+    handleChangeEmail = (email) => {
+        this.setState({email});
+    }
+
+    render () {
+        return (
+            <View>
+                <TextInput style={styles.descriptionInput}
+                    value={this.state.email}
+                    onChangeText={this.handleChangeEmail}
+                />
+                <TextInput style={styles.descriptionInput}
+                    value={this.state.username}
+                    onChangeText={this.handleChangeUsername}
+                />
+                <TextInput style={styles.descriptionInput}
+                    value={this.state.password}
+                    onChangeText={this.handleChangePassword}
+                /> 
+                <TouchableOpacity
+                    style={styles.saveButton}
+                    onPress={() => this.confirm()}
+                >
+                    <Text>
+                        {this.state.login ? 'LOGIN' : 'Create Account'}
+                    </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={styles.saveButton}
+                    onPress={() => this.setState({login: !this.state.login})}
+                >
+                    <Text>
+                        {this.state.login ? 'Need to Create an Account' : 'Already Have an Account?'}
+                    </Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                    style={styles.saveButton} 
+                    disabled={ 
+                        this.state.username === '' || 
+                        this.state.password === ''}
+                    onPress={() => this.props.navigation.navigate('RecipeList')}>
+                    <Text style={styles.saveButtonText}>SIGN UP</Text>
+                </TouchableOpacity>
+            </View>
+        )
+    }
+}
+
+const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: 'rgba(255,255,255,1)'
+    },
+    header:{
+      fontSize:20,
+      textAlign:'center',
+      fontWeight: 'bold'
+    },
+    descriptionInput: {
+      paddingHorizontal: 20,
+      marginTop:30,
+      height: 50,
+      width:'90%',
+      fontSize: 20,
+      borderColor: 'gray',
+      borderWidth: 1,
+      marginHorizontal:20,
+    },
+    saveButton: {
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: 'blue',
+      height: 50,
+      width:'90%',
+      borderRadius: 5,
+      marginHorizontal:20,
+      margin:10,
+    },
+    saveButtonText: {
+      color: 'white',
+    },
+  })
+export default SignUpScreen;
